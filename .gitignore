@@ -1,0 +1,72 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database migrations and SQL inspection files
+migrations/
+
+# SQL inspection and debugging files
+check_columns.sql
+check_tables.sql
+check_views.sql
+check_functions.sql
+check_triggers.sql
+check_indexes.sql
+check_constraints.sql
+
+# SQL fix files
+fix_users_rls.sql
+fix_users_views.sql
+fix_users_functions.sql
+fix_users_triggers.sql
+fix_users_indexes.sql
+fix_users_constraints.sql
+
+# SQL admin inspection files
+inspect_admin_users.sql
+inspect_admin_views.sql
+inspect_admin_functions.sql
+inspect_admin_triggers.sql
+inspect_admin_indexes.sql
+inspect_admin_constraints.sql
+
+# SQL general inspection files
+schema_inspector.sql
+inspect_users.sql
+inspect_views.sql
+inspect_functions.sql
+inspect_triggers.sql
+inspect_indexes.sql
+inspect_constraints.sql
+
+# Audit and debugging scripts
+audit_tables.mjs
+check_users.js
+
+# Test files (if any)
+coverage/
+*.test.js.snap

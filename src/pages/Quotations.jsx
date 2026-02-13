@@ -27,7 +27,7 @@ const generatePDF = (quote, settings) => {
     
     doc.setFontSize(10)
     doc.setTextColor(100, 100, 100)
-    doc.text(settings?.company_address || "Headquarters", 14, 28)
+    doc.text(settings?.address || "Headquarters", 14, 28)
     doc.text(`Phone: ${settings?.contact_phone || "N/A"}`, 14, 33)
     
     doc.setFontSize(12)

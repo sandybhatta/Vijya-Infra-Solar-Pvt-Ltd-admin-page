@@ -11,7 +11,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell
+  Cell,
+  LabelList
 } from 'recharts'
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#ec4899', '#14b8a6']
@@ -116,7 +117,9 @@ export default function ExpenseCharts({ analytics }) {
                 dot={{ fill: '#ef4444', r: 4 }}
                 activeDot={{ r: 6 }}
                 name="Expense"
-              />
+              >
+                 <LabelList dataKey="amount" position="top" fill="#ef4444" fontSize={10} formatter={(v) => v > 0 ? `₹${(v/1000).toFixed(1)}k` : ''} />
+              </Line>
             </LineChart>
           </ResponsiveContainer>
         </CardContent>

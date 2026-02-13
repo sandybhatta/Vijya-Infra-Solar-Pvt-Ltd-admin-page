@@ -673,7 +673,7 @@ export const financeApi = apiSlice.injectEndpoints({
         try {
           const { data, error } = await supabase
             .from('business_settings')
-            .select('*')
+            .select('id, company_name, gst_number, address, contact_email, contact_phone, created_at')
             .maybeSingle()
           if (error) throw error
           return { data: data || {} }
@@ -698,13 +698,13 @@ export const financeApi = apiSlice.injectEndpoints({
               .from('business_settings')
               .update(settings)
               .eq('id', existing.id)
-              .select()
+              .select('id, company_name, gst_number, address, contact_email, contact_phone, created_at')
               .single()
           } else {
             result = await supabase
               .from('business_settings')
               .insert([settings])
-              .select()
+              .select('id, company_name, gst_number, address, contact_email, contact_phone, created_at')
               .single()
           }
 

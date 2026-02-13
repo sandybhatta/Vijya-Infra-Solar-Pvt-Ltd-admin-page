@@ -48,7 +48,8 @@ export default function Login() {
            dispatch(setUser({ 
                user: data.user, 
                session: data.session, 
-               role: adminUser.role 
+               role: adminUser.role,
+               isActive: true
            }))
            toast.success("Welcome back, Commander.")
            navigate('/dashboard')

@@ -87,16 +87,37 @@ export default function PaymentAnalyticsCards({ analytics, isLoading }) {
       bgColor: 'bg-pink-500/10'
     },
     {
-      title: 'UPI Payments',
+      title: 'UPI',
       value: formatCurrency(analytics?.modeBreakdown?.upi || 0),
       icon: CreditCard,
       color: 'text-indigo-400',
       bgColor: 'bg-indigo-500/10'
+    },
+    {
+      title: 'Cash',
+      value: formatCurrency(analytics?.modeBreakdown?.cash || 0),
+      icon: Banknote,
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-500/10'
+    },
+    {
+      title: 'Bank Transfer',
+      value: formatCurrency(analytics?.modeBreakdown?.bank_transfer || 0),
+      icon: Building2,
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-500/10'
+    },
+    {
+      title: 'Cheque',
+      value: formatCurrency(analytics?.modeBreakdown?.cheque || 0),
+      icon: Receipt,
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-500/10'
     }
   ]
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
       {cards.map((card, index) => {
         const Icon = card.icon
         return (

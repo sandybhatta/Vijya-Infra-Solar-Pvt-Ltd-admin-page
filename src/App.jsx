@@ -22,6 +22,7 @@ import LeadStatusHistory from './pages/LeadStatusHistory'
 import ActivityLogs from './pages/ActivityLogs'
 import Reports from './pages/Reports' // Added
 import Users from './pages/Users' // Added
+import Materials from './pages/Materials'
 import { Layout } from './components/layout/Layout'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 
@@ -79,6 +80,7 @@ function App() {
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/activity-logs" element={<ActivityLogs />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/materials" element={<Materials />} />
                 
                 {/* Admin Only Route */}
                 <Route element={<ProtectedRoute allowedRoles={['admin']} />}>

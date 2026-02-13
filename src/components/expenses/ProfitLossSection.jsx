@@ -8,7 +8,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  LabelList
 } from 'recharts'
 import { TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react'
 
@@ -129,9 +130,15 @@ export default function ProfitLossSection({ profitLossData, isLoading }) {
                 formatter={(value) => formatCurrency(value)}
               />
               <Legend wrapperStyle={{ color: '#9ca3af' }} />
-              <Bar dataKey="revenue" fill="#10b981" name="Revenue" />
-              <Bar dataKey="expense" fill="#ef4444" name="Expense" />
-              <Bar dataKey="profit" fill="#3b82f6" name="Profit" />
+              <Bar dataKey="revenue" fill="#10b981" name="Revenue">
+                <LabelList dataKey="revenue" position="top" fill="#10b981" fontSize={10} formatter={(v) => v > 0 ? `${(v/1000).toFixed(0)}k` : ''} />
+              </Bar>
+              <Bar dataKey="expense" fill="#ef4444" name="Expense">
+                <LabelList dataKey="expense" position="top" fill="#ef4444" fontSize={10} formatter={(v) => v > 0 ? `${(v/1000).toFixed(0)}k` : ''} />
+              </Bar>
+              <Bar dataKey="profit" fill="#3b82f6" name="Profit">
+                <LabelList dataKey="profit" position="top" fill="#3b82f6" fontSize={10} formatter={(v) => `${(v/1000).toFixed(0)}k`} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

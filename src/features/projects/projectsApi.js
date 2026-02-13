@@ -14,7 +14,7 @@ export const projectsApi = apiSlice.injectEndpoints({
             .select(`
               *,
               leads(name, city, state),
-              invoices(invoice_amount, payment_status),
+              invoices(id, invoice_amount, payment_status),
               expenses(amount),
               project_materials(total_cost)
             `, { count: 'exact' })
@@ -40,7 +40,7 @@ export const projectsApi = apiSlice.injectEndpoints({
           if (error) throw error
 
           // Attach Payment Totals (Payments are via Invoices)
-          const invoiceIds = data.flatMap(p => p.invoices?.map(i => i.id) || [])
+          const invoiceIds = data.flatMap(p => p.invoices?.map(i => i.id) || []).filter(Boolean)
           let payments = []
           if (invoiceIds.length > 0) {
             const { data: payData } = await supabase.from('payments').select('invoice_id, paid_amount').in('invoice_id', invoiceIds)

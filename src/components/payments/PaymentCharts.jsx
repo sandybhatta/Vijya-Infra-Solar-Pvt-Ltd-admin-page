@@ -13,7 +13,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell
+  Cell,
+  LabelList
 } from 'recharts'
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1']
@@ -89,7 +90,9 @@ export default function PaymentCharts({ analytics }) {
                 dot={{ fill: '#10b981', r: 4 }}
                 activeDot={{ r: 6 }}
                 name="Amount"
-              />
+              >
+                <LabelList dataKey="amount" position="top" fill="#10b981" fontSize={10} formatter={(v) => v > 0 ? `₹${(v/1000).toFixed(1)}k` : ''} />
+              </Line>
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -164,7 +167,9 @@ export default function PaymentCharts({ analytics }) {
                 formatter={(value) => [formatCurrency(value), 'Amount']}
               />
               <Legend wrapperStyle={{ color: '#9ca3af' }} />
-              <Bar dataKey="amount" fill="#3b82f6" name="Collection Amount" />
+              <Bar dataKey="amount" fill="#3b82f6" name="Collection Amount">
+                <LabelList dataKey="amount" position="top" fill="#fff" fontSize={10} formatter={(v) => v > 0 ? `₹${(v/1000).toFixed(1)}k` : ''} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

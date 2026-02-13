@@ -4,66 +4,153 @@ import { apiSlice } from '../api/apiSlice'
 export const inventoryApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getInventory: builder.query({
-       queryFn: async ({ page = 1, limit = 10, search = '', lowStock = false }) => {
+       queryFn: async ({ page = 1, limit = 10, search = '', lowStock = false, brand = 'all' }) => {
         try {
           const from = (page - 1) * limit
           const to = from + limit - 1
           
-          // Query inventory_stock (which has quantity) and join materials (which has name)
           let query = supabase
             .from('inventory_stock')
-            .select('*, materials!inner(*)', { count: 'exact' }) // Inner join to filter by material name if needed
+            .select('*, materials!inner(*)', { count: 'exact' })
             .range(from, to)
+            .order('updated_at', { ascending: false })
 
           if (search) {
-             // Filter by material name via the join
              query = query.ilike('materials.name', `%${search}%`)
           }
           
+          if (brand !== 'all') {
+            query = query.eq('materials.brand', brand)
+          }
+          
           if (lowStock) {
-              query = query.lt('quantity_available', 10) 
+              // Filters for Low Stock (less than or equal to reorder_level)
+              query = query.filter('quantity_available', 'lte', 'reorder_level')
           }
 
           const { data, error, count } = await query
           if (error) throw error
           
-          // Flatten for UI if needed, or UI can handle nested
-          // The UI expects 'name', 'quantity' (mapped to quantity_available), 'unit_cost'
-          const flattened = data.map(item => ({
-              ...item,
-              name: item.materials?.name,
-              sku: item.materials?.brand, // Assuming brand as SKU substitute or display
-              quantity: item.quantity_available,
-              unit_cost: item.materials?.unit_cost,
-              id: item.material_id // Ensure generic ID actions work on material_id or stock id? 
-              // UI delete probably wants material_id or stock_id. 
-              // deleteMaterial mutation uses 'materials' table with 'id'.
-              // So if we pass 'material_id' as 'id', delete works on material.
-          }))
-
-          return { data: { materials: flattened, total: count } }
+          return { data: { materials: data, total: count } }
         } catch (error) {
           return { error: error.message }
         }
       },
       providesTags: ['Inventory'],
     }),
+
+    getInventoryAnalytics: builder.query({
+      queryFn: async () => {
+        try {
+          // 1. Fetch materials + stock
+          const { data: stockData, error: stockError } = await supabase
+            .from('inventory_stock')
+            .select('quantity_available, reorder_level, materials(unit_cost, unit_price)')
+
+          if (stockError) throw stockError
+
+          const totalMaterials = stockData.length
+          const totalStockUnits = stockData.reduce((sum, item) => sum + Number(item.quantity_available || 0), 0)
+          const lowStockItems = stockData.filter(item => Number(item.quantity_available) <= Number(item.reorder_level)).length
+          const totalCostValue = stockData.reduce((sum, item) => sum + (Number(item.quantity_available) * Number(item.materials?.unit_cost || 0)), 0)
+          const totalSellingValue = stockData.reduce((sum, item) => sum + (Number(item.quantity_available) * Number(item.materials?.unit_price || 0)), 0)
+          const potentialProfit = totalSellingValue - totalCostValue
+
+          // 2. Stock distribution for chart
+          const healthy = stockData.filter(item => Number(item.quantity_available) > Number(item.reorder_level)).length
+          const outOfStock = stockData.filter(item => Number(item.quantity_available) === 0).length
+          const low = lowStockItems - outOfStock 
+
+          return { 
+            data: { 
+              stats: { totalMaterials, totalStockUnits, lowStockItems, totalCostValue, totalSellingValue, potentialProfit },
+              distribution: [
+                { name: 'Healthy', value: healthy, color: '#10b981' },
+                { name: 'Low Stock', value: low, color: '#f59e0b' },
+                { name: 'Out of Stock', value: outOfStock, color: '#ef4444' }
+              ]
+            } 
+          }
+        } catch (error) {
+          return { error: error.message }
+        }
+      },
+      providesTags: ['InventoryAnalytics']
+    }),
+
+    getProjectMaterials: builder.query({
+      queryFn: async ({ projectId = 'all', status = 'all', page = 1, limit = 10 }) => {
+        try {
+          const from = (page - 1) * limit
+          const to = from + limit - 1
+
+          let query = supabase
+            .from('project_materials')
+            .select('*, projects!inner(*), materials(*)', { count: 'exact' })
+            .range(from, to)
+            .order('created_at', { ascending: false })
+
+          if (projectId !== 'all') query = query.eq('project_id', projectId)
+          if (status !== 'all') query = query.eq('projects.project_status', status)
+
+          const { data, error, count } = await query
+          if (error) throw error
+
+          return { data: { consumptions: data, total: count } }
+        } catch (error) {
+          return { error: error.message }
+        }
+      },
+      providesTags: ['ProjectMaterials']
+    }),
+
+    getUsageTrends: builder.query({
+      queryFn: async () => {
+        try {
+          // Top 10 Most Used Materials
+          const { data: topUsed, error: topError } = await supabase
+            .from('project_materials')
+            .select('quantity, materials(name)')
+          
+          if (topError) throw topError
+
+          const usageMap = {}
+          topUsed.forEach(item => {
+            const name = item.materials?.name || 'Unknown'
+            usageMap[name] = (usageMap[name] || 0) + Number(item.quantity)
+          })
+
+          const top10 = Object.entries(usageMap)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([name, value]) => ({ name, value }))
+
+          return { data: { top10 } }
+        } catch (error) {
+          return { error: error.message }
+        }
+      },
+      providesTags: ['InventoryAnalytics']
+    }),
+
     addMaterial: builder.mutation({
-        queryFn: async ({ name, sku, unit, unit_cost, quantity }) => {
+        queryFn: async ({ name, brand, unit, unit_cost, unit_price, initial_stock, reorder_level }) => {
           try {
-            // 1. Insert into materials
             const { data: mat, error: matError } = await supabase
                 .from('materials')
-                .insert([{ name, brand: sku, unit, unit_cost }]) // Mapping brand to sku for now
+                .insert([{ name, brand, unit: unit || 'pcs', unit_cost, unit_price }])
                 .select()
                 .single()
             
             if (matError) throw matError
 
-            // 2. Insert into inventory_stock
             const { error: stockError } = await supabase
                 .from('inventory_stock')
-                .insert([{ material_id: mat.id, quantity_available: quantity || 0, warehouse_location: 'Main' }])
+                .insert([{ 
+                  material_id: mat.id, 
+                  quantity_available: initial_stock || 0, 
+                  reorder_level: reorder_level || 10 
+                }])
             
             if (stockError) throw stockError
 
@@ -72,37 +159,45 @@ export const inventoryApi = apiSlice.injectEndpoints({
             return { error: error.message }
           }
         },
-        invalidatesTags: ['Inventory'],
+        invalidatesTags: ['Inventory', 'InventoryAnalytics'],
       }),
+
     adjustStock: builder.mutation({
-        queryFn: async ({ material_id, quantity, type, reason }) => {
+        queryFn: async ({ material_id, quantity, type, reason, notes }) => {
             try {
-                // Fetch current
                 const { data: stock, error: fetchError } = await supabase.from('inventory_stock').eq('material_id', material_id).single()
                 if (fetchError) throw new Error("Stock record not found")
 
-                const newQty = type === 'in' ? stock.quantity_available + quantity : stock.quantity_available - quantity
+                let newQty = stock.quantity_available
+                if (type === 'in') newQty += Number(quantity)
+                else if (type === 'out') newQty -= Number(quantity)
+                else newQty = Number(quantity) // set exact
+
                 if (newQty < 0) throw new Error("Insufficient stock")
 
-                // Update
-                const { error: updateError } = await supabase.from('inventory_stock').update({ quantity_available: newQty }).eq('id', stock.id)
+                const { error: updateError } = await supabase
+                  .from('inventory_stock')
+                  .update({ quantity_available: newQty, updated_at: new Date() })
+                  .eq('id', stock.id)
+                
                 if (updateError) throw updateError
 
-                // Log
                 await supabase.from('inventory_logs').insert([{
                     material_id,
-                    change_type: type,
+                    action_type: type,
                     quantity,
-                    reason,
-                    created_at: new Date()
+                    note: reason || notes,
+                    created_at: new Date(),
+                    created_by: (await supabase.auth.getUser()).data.user?.id
                 }])
                 return { data: true }
             } catch (error) {
                 return { error: error.message }
             }
         },
-        invalidatesTags: ['Inventory']
+        invalidatesTags: ['Inventory', 'InventoryAnalytics']
     }),
+
     updateMaterial: builder.mutation({
       queryFn: async ({ id, ...updates }) => {
         try {
@@ -113,11 +208,16 @@ export const inventoryApi = apiSlice.injectEndpoints({
           return { error: error.message }
         }
       },
-      invalidatesTags: ['Inventory'],
+      invalidatesTags: ['Inventory', 'InventoryAnalytics'],
     }),
+
     deleteMaterial: builder.mutation({
         queryFn: async (id) => {
             try {
+                // Check if used in projects
+                const { count } = await supabase.from('project_materials').select('*', { count: 'exact', head: true }).eq('material_id', id)
+                if (count > 0) throw new Error("Cannot delete material: It is being used in projects.")
+
                 const { error } = await supabase.from('materials').delete().eq('id', id)
                 if (error) throw error
                 return { data: id }
@@ -125,15 +225,18 @@ export const inventoryApi = apiSlice.injectEndpoints({
                 return { error: error.message }
             }
         },
-        invalidatesTags: ['Inventory']
+        invalidatesTags: ['Inventory', 'InventoryAnalytics']
     })
   }),
 })
 
 export const { 
     useGetInventoryQuery, 
+    useGetInventoryAnalyticsQuery,
+    useGetProjectMaterialsQuery,
+    useGetUsageTrendsQuery,
     useAddMaterialMutation, 
     useUpdateMaterialMutation, 
     useDeleteMaterialMutation,
-    useAdjustStockMutation
+    useAdjustStockMutation 
 } = inventoryApi

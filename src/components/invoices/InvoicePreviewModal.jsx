@@ -48,9 +48,9 @@ export default function InvoicePreviewModal({
     
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
-    doc.text(businessSettings.company_address || '', 20, 28)
-    doc.text(`Email: ${businessSettings.company_email || ''}`, 20, 34)
-    doc.text(`Phone: ${businessSettings.company_phone || ''}`, 20, 40)
+    doc.text(businessSettings.address || '', 20, 28)
+    doc.text(`Email: ${businessSettings.contact_email || ''}`, 20, 34)
+    doc.text(`Phone: ${businessSettings.contact_phone || ''}`, 20, 40)
     
     // Invoice Title
     doc.setFontSize(24)
@@ -176,13 +176,13 @@ Due Date: ${format(new Date(invoice.due_date), 'MMM dd, yyyy')}
                 {businessSettings.company_name || 'Solar Business Admin'}
               </h1>
               <p className="text-sm text-gray-600 mt-2">
-                {businessSettings.company_address || ''}
+                {businessSettings.address || ''}
               </p>
               <p className="text-sm text-gray-600">
-                Email: {businessSettings.company_email || ''}
+                Email: {businessSettings.contact_email || ''}
               </p>
               <p className="text-sm text-gray-600">
-                Phone: {businessSettings.company_phone || ''}
+                Phone: {businessSettings.contact_phone || ''}
               </p>
             </div>
             <div className="text-right">

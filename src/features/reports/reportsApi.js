@@ -37,12 +37,12 @@ export const reportsApi = createApi({
           ] = await Promise.all([
             applyFilters(supabase.from('leads').select('*')),
             applyFilters(supabase.from('projects').select('*, leads(name, city, state), project_materials(quantity, total_cost)')),
-            applyFilters(supabase.from('payments').select('*, invoices(invoice_amount, payment_status, lead_id)')),
+            applyFilters(supabase.from('payments').select('*')),
             applyFilters(supabase.from('expenses').select('*')),
             supabase.from('inventory_stock').select('*'),
             supabase.from('employees').select('*, employee_tasks(*)'),
             applyFilters(supabase.from('lead_status_history').select('*')),
-            supabase.from('campaigns').select('*')
+            supabase.from('marketing_campaigns').select('*')
           ])
 
           return { data: {

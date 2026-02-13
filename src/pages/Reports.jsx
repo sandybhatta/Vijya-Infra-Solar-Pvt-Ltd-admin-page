@@ -13,7 +13,8 @@ import {
   StatCard,
   FunnelStep,
   InsightCard,
-  SectionHeader
+  SectionHeader,
+  DrillDownModal
 } from '@/components/reports/ReportsComponents'
 import { 
   Card, 
@@ -72,7 +73,11 @@ import {
   Calendar as CalendarIcon,
   ChevronDown,
   Globe,
-  Loader2
+  Loader2,
+  FileText,
+  CheckCircle2,
+  Clock,
+  AlertCircle
 } from 'lucide-react'
 import { 
   BarChart, Bar, 
@@ -112,6 +117,7 @@ export default function Reports() {
   const [isSavePresetOpen, setIsSavePresetOpen] = useState(false)
   const [presetName, setPresetName] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [drillDown, setDrillDown] = useState({ isOpen: false, title: '', data: [], columns: [] })
 
   // --- API ---
   const { data, isLoading, refetch, isFetching } = useGetGlobalAnalyticsQuery(filters)
@@ -421,9 +427,11 @@ export default function Reports() {
             </SelectTrigger>
             <SelectContent>
                 <SelectItem value="all">All Cities</SelectItem>
-                {/* Dynamically populate from data */}
-                <SelectItem value="Agartala">Agartala</SelectItem>
-                <SelectItem value="Udaipur">Udaipur</SelectItem>
+                {processedData?.locationStats?.map(location => (
+                  <SelectItem key={location.name} value={location.name}>
+                    {location.name} ({location.value})
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
 
@@ -579,15 +587,7 @@ export default function Reports() {
                 <CardDescription>Current balance and outstanding</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="flex justify-between items-center p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
-                    <div>
-                        <p className="text-xs font-bold text-green-500 uppercase">Health Score</p>
-                        <p className="text-2xl font-black text-green-400">Excellent</p>
-                    </div>
-                    <div className="h-12 w-12 rounded-full border-4 border-green-500/50 flex items-center justify-center font-bold text-green-500 text-sm">
-                        94%
-                    </div>
-                </div>
+                {/* Health Score - Hidden until real calculation is implemented */}
 
                 <div className="space-y-4">
                     <div className="flex justify-between text-sm">
@@ -598,13 +598,7 @@ export default function Reports() {
                         <div className="h-full bg-primary" style={{ width: `${processedData.stats.profitMargin}%` }} />
                     </div>
                     
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Expense Ratio</span>
-                        <span className="font-bold">24.5%</span>
-                    </div>
-                    <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500" style={{ width: `24.5%` }} />
-                    </div>
+                    {/* Expense Ratio - Hidden until real calculation is implemented */}
                 </div>
             </CardContent>
         </Card>
@@ -633,49 +627,9 @@ export default function Reports() {
           </Card>
 
           <div className="space-y-6">
-              <Card className="bg-glass-bg border-glass-border border-l-4 border-l-amber-500">
-                  <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-amber-500" /> Bottleneck Detector
-                      </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                      <div className="p-3 bg-amber-500/5 rounded-lg border border-amber-500/10">
-                          <p className="text-sm flex justify-between">
-                              <span>Stuck in <strong>Contacted</strong> &gt; 7 days</span>
-                              <Badge variant="outline" className="text-amber-500">12 Leads</Badge>
-                          </p>
-                      </div>
-                      <div className="p-3 bg-red-500/5 rounded-lg border border-red-500/10">
-                          <p className="text-sm flex justify-between">
-                              <span>Quotation sent &gt; 10 days no response</span>
-                              <Badge variant="outline" className="text-red-500">5 Leads</Badge>
-                          </p>
-                      </div>
-                  </CardContent>
-              </Card>
+              {/* Bottleneck Detector - Hidden until real data calculation is implemented */}
 
-              <Card className="bg-glass-bg border-glass-border">
-                  <CardHeader>
-                      <CardTitle className="text-sm">Funnel Insights</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                      <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><Clock className="h-5 w-5 text-primary"/></div>
-                          <div>
-                              <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Avg. Speed to Conversion</p>
-                              <p className="text-xl font-bold">14.2 Days</p>
-                          </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-green-500"/></div>
-                          <div>
-                              <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Best Conversion Stage</p>
-                              <p className="text-xl font-bold">Site Visit &rarr; Quotation (88%)</p>
-                          </div>
-                      </div>
-                  </CardContent>
-              </Card>
+              {/* Funnel Insights - Hidden until real data calculation is implemented */}
           </div>
       </div>
 
@@ -720,18 +674,17 @@ export default function Reports() {
                 <CardTitle>Marketing Insights</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-                    <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">Top Performer</p>
-                    <p className="text-lg font-bold">"Google Search - Solar Panels"</p>
-                    <p className="text-xs text-muted-foreground mt-1">Highest conversion rate (12.4%) and lowest CPA.</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                    <div>
-                        <p className="text-sm font-bold">Suggested AI Optimization</p>
-                        <p className="text-xs text-muted-foreground">Increase budget on Agartala Local Ads by 20%. ROI is currently 4x the branch average.</p>
+                {processedData.campaignROI.length > 0 ? (
+                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                        <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">Top Performer</p>
+                        <p className="text-lg font-bold">{processedData.campaignROI[0]?.name || 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Conversion rate: {processedData.campaignROI[0]?.conversionRate}% | ROI: {processedData.campaignROI[0]?.roi}%</p>
                     </div>
-                </div>
+                ) : (
+                    <div className="p-4 rounded-xl bg-muted/20 border border-muted">
+                        <p className="text-xs text-muted-foreground text-center">No campaign data available</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
       </div>

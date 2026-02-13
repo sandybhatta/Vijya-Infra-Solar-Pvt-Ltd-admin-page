@@ -85,7 +85,7 @@ export const SourceDetailsDrawer = ({ sourceId, isOpen, onClose, sourceName }) =
                                         {sourceName}
                                     </SheetTitle>
                                     <p className="text-muted-foreground text-xs mt-2 italic flex items-center gap-2">
-                                        <Calendar className="h-3 w-3" /> Data aggregated since {details?.summary?.first_lead ? format(new Date(details.summary.first_lead), 'PPP') : 'N/A'}
+                                        <Calendar className="h-3 w-3" /> Data aggregated since {details?.created_at ? format(new Date(details.created_at), 'PPP') : 'N/A'}
                                     </p>
                                 </div>
                                 <Button size="sm" variant="ghost" className="h-8 w-8 rounded-full border border-white/10" onClick={onClose}>
@@ -96,13 +96,13 @@ export const SourceDetailsDrawer = ({ sourceId, isOpen, onClose, sourceName }) =
                             <div className="grid grid-cols-2 gap-4 mt-8">
                                 <SummaryBadge 
                                     label="Total Leads" 
-                                    value={details?.summary?.total_leads || 0} 
+                                    value={details?.total_leads || 0} 
                                     icon={Users}
                                     color="border-blue-500/20 text-blue-400"
                                 />
                                 <SummaryBadge 
                                     label="Conv. Rate" 
-                                    value={`${(details?.summary?.conversion_rate || 0).toFixed(1)}%`} 
+                                    value={`${details?.conversion_rate || 0}%`} 
                                     icon={TrendingUp}
                                     color="border-green-500/20 text-green-400"
                                 />
@@ -115,12 +115,12 @@ export const SourceDetailsDrawer = ({ sourceId, isOpen, onClose, sourceName }) =
                             <section>
                                 <SectionHeader title="Conversion Funnel" icon={Target} />
                                 <div className="grid grid-cols-1 gap-2 mt-4">
-                                    {details?.funnel?.map((item, idx) => (
+                                    {details?.funnel && Object.entries(details.funnel).map(([status, count], idx) => (
                                         <FunnelBar 
-                                            key={item.status}
-                                            label={item.status}
-                                            count={item.count}
-                                            total={details.summary.total_leads}
+                                            key={status}
+                                            label={status}
+                                            count={count}
+                                            total={details.total_leads}
                                             color={COLORS[idx % COLORS.length]}
                                         />
                                     ))}
@@ -175,7 +175,7 @@ export const SourceDetailsDrawer = ({ sourceId, isOpen, onClose, sourceName }) =
                                     <Zap className="h-5 w-5 text-primary mb-4" />
                                     <h4 className="text-sm font-black text-white uppercase tracking-tight mb-2 italic">Performance Insight</h4>
                                     <p className="text-xs text-gray-300 leading-relaxed italic">
-                                        {getSourceInsight(details?.summary)}
+                                        {getSourceInsight(details)}
                                     </p>
                                 </div>
                             </section>
@@ -261,19 +261,24 @@ const FunnelBar = ({ label, count, total, color }) => {
     )
 }
 
-function getSourceInsight(summary) {
-    if (!summary) return "Processing source signal..."
+function getSourceInsight(details) {
+    if (!details) return "Processing source signal..."
     
-    if (summary.conversion_rate > 15) {
+    const conversionRate = parseFloat(details.conversion_rate) || 0
+    const totalLeads = details.total_leads || 0
+    const rejectedCount = details.funnel?.rejected || 0
+    const rejectionRate = totalLeads > 0 ? (rejectedCount / totalLeads * 100) : 0
+    
+    if (conversionRate > 15) {
         return "CRITICAL ADVANTAGE: This source displays an elite conversion profile. Recommendation: Scale budget allocation to maximize high-quality yield immediately."
     }
-    if (summary.total_leads > 50 && summary.conversion_rate < 5) {
+    if (totalLeads > 50 && conversionRate < 5) {
         return "EFFICIENCY WARNING: High signal volume detected but conversion protocols are failing. Audit your sales follow-up script or secondary qualification filters."
     }
-    if (summary.rejection_rate > 40) {
+    if (rejectionRate > 40) {
         return "SIGNAL NOISE DETECTED: High rejection rate suggests targeting misalignment. Re-evaluate the source demographic parameters to reduce wasted resources."
     }
-    if (summary.avg_per_month < 2 && summary.total_leads > 0) {
+    if (totalLeads < 10 && totalLeads > 0) {
         return "DORMANT SIGNAL: Slow data frequency. This source might be seasonal or require a refreshed creative strategy to regain momentum."
     }
     

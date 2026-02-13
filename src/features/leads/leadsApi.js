@@ -90,16 +90,28 @@ export const leadsApi = apiSlice.injectEndpoints({
     getLeadInsights: builder.query({
         queryFn: async () => {
             try {
-                // Get top city
-                const { data: cityData } = await supabase.rpc('get_top_lead_city') // Fallback to raw if RPC missing
+                // Get all leads and process on client side
+                const { data: allLeads, error: leadsError } = await supabase
+                    .from('leads')
+                    .select('city, status, lead_sources(name)')
                 
-                // Get source performance
-                const { data: sourcePerf } = await supabase.from('leads').select('status, lead_sources(name)')
+                if (leadsError) throw leadsError
                 
-                // Process on client for now if RPCs aren't ready
-                const cityCounts = cityData || []
+                // Calculate top city
+                const cityCounts = {}
+                allLeads?.forEach(lead => {
+                    if (lead.city) {
+                        cityCounts[lead.city] = (cityCounts[lead.city] || 0) + 1
+                    }
+                })
                 
-                return { data: { topCity: cityCounts[0], sourcePerf } }
+                const topCity = Object.entries(cityCounts)
+                    .sort((a, b) => b[1] - a[1])[0]
+                
+                return { data: { 
+                    topCity: topCity ? { city: topCity[0], count: topCity[1] } : null, 
+                    sourcePerf: allLeads 
+                } }
             } catch (error) {
                 return { error: error.message }
             }

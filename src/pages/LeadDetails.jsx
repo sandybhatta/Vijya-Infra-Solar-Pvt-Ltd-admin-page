@@ -18,7 +18,7 @@ import {
     MessageSquare, History, User, Edit3, 
     CheckCircle2, Clock, AlertCircle, FileText, 
     IndianRupee, TrendingUp, MoreVertical, Plus, 
-    CheckSquare, BarChart2, Activity, Zap
+    CheckSquare, BarChart2, Activity, Zap, Globe
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Loader2 } from 'lucide-react'

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { 
@@ -34,15 +34,15 @@ const leadSchema = z.object({
     email: z.string().email("Invalid email address"),
     phone_number: z.string().min(10, "Phone must be at least 10 digits"),
     city: z.string().min(2, "City is required"),
-    state: z.string().min(2, "State is required"),
-    pincode: z.string().optional(),
+    state: z.preprocess((val) => val === null || val === '' ? undefined : val, z.string().min(2, "State is required").optional()),
+    pincode: z.preprocess((val) => val === null ? '' : val, z.string().optional()),
     solar_type: z.enum(['On-Grid', 'Off-Grid', 'Hybrid']).default('On-Grid'),
     status: z.string().default('new'),
-    message: z.string().optional(),
-    electricity_distribution_company: z.string().optional(),
-    average_consumption_per_month: z.coerce.number().optional(),
-    source_id: z.string().optional(),
-    campaign_id: z.string().optional(),
+    message: z.preprocess((val) => val === null ? '' : val, z.string().optional()),
+    electricity_distribution_company: z.preprocess((val) => val === null ? '' : val, z.string().optional()),
+    average_consumption_per_month: z.preprocess((val) => val === null || val === '' ? undefined : val, z.coerce.number().optional()),
+    source_id: z.preprocess((val) => val === null || val === '' ? undefined : val, z.string().optional()),
+    campaign_id: z.preprocess((val) => val === null || val === '' ? undefined : val, z.string().optional()),
 })
 
 export const LeadModal = ({ open, setOpen, initialData = null }) => {
@@ -59,6 +59,7 @@ export const LeadModal = ({ open, setOpen, initialData = null }) => {
         reset,
         setValue,
         watch,
+        control,
         formState: { errors }
     } = useForm({
         resolver: zodResolver(leadSchema),
@@ -77,9 +78,14 @@ export const LeadModal = ({ open, setOpen, initialData = null }) => {
     }, [initialData, open, reset])
 
     const onSubmit = async (data) => {
+        console.log('Form submitted with data:', data)
+        console.log('Initial data:', initialData)
+        console.log('Form errors:', errors)
         try {
             if (initialData) {
-                await updateLead({ id: initialData.id, ...data }).unwrap()
+                console.log('Updating lead with:', { id: initialData.id, ...data })
+                const result = await updateLead({ id: initialData.id, ...data }).unwrap()
+                console.log('Update result:', result)
                 toast.success("Lead Synchronization Complete")
             } else {
                 await addLead(data).unwrap()
@@ -87,8 +93,18 @@ export const LeadModal = ({ open, setOpen, initialData = null }) => {
             }
             setOpen(false)
         } catch (error) {
-            toast.error("Data stream interrupted")
+            console.error('Update error:', error)
+            toast.error(`Data stream interrupted: ${error.message || error}`)
         }
+    }
+
+    const onError = (errors) => {
+        console.log('Form validation errors:', errors)
+        console.log('Error fields:', Object.keys(errors))
+        Object.keys(errors).forEach(field => {
+            console.log(`Field "${field}":`, errors[field])
+        })
+        toast.error(`Please fix form errors: ${Object.keys(errors).join(', ')}`)
     }
 
     return (
@@ -103,7 +119,7 @@ export const LeadModal = ({ open, setOpen, initialData = null }) => {
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-8">
                     {/* section 1: Basic Info */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-2">
@@ -118,16 +134,22 @@ export const LeadModal = ({ open, setOpen, initialData = null }) => {
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[9px] uppercase font-black text-muted-foreground">Operational Status</Label>
-                                <Select defaultValue={initialData?.status || 'new'} onValueChange={v => setValue('status', v)}>
-                                    <SelectTrigger className="bg-white/5 border-white/10">
-                                        <SelectValue placeholder="Select Status" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-stone-900 border-stone-800">
-                                        {['new', 'contacted', 'site_visit_done', 'quotation_sent', 'negotiation', 'converted', 'rejected'].map(s => (
-                                            <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Controller
+                                    name="status"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Select value={field.value} onValueChange={field.onChange}>
+                                            <SelectTrigger className="bg-white/5 border-white/10">
+                                                <SelectValue placeholder="Select Status" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-stone-900 border-stone-800">
+                                                {['new', 'contacted', 'site_visit_done', 'quotation_sent', 'negotiation', 'converted', 'rejected'].map(s => (
+                                                    <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -167,16 +189,22 @@ export const LeadModal = ({ open, setOpen, initialData = null }) => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <Label className="text-[9px] uppercase font-black text-muted-foreground">Solar Infrastructure</Label>
-                                <Select defaultValue={initialData?.solar_type || 'On-Grid'} onValueChange={v => setValue('solar_type', v)}>
-                                    <SelectTrigger className="bg-white/5 border-white/10">
-                                        <SelectValue placeholder="Infrastructure Type" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-stone-900 border-stone-800">
-                                        <SelectItem value="On-Grid">On-Grid System</SelectItem>
-                                        <SelectItem value="Off-Grid">Off-Grid System</SelectItem>
-                                        <SelectItem value="Hybrid">Hybrid System</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Controller
+                                    name="solar_type"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Select value={field.value} onValueChange={field.onChange}>
+                                            <SelectTrigger className="bg-white/5 border-white/10">
+                                                <SelectValue placeholder="Infrastructure Type" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-stone-900 border-stone-800">
+                                                <SelectItem value="On-Grid">On-Grid System</SelectItem>
+                                                <SelectItem value="Off-Grid">Off-Grid System</SelectItem>
+                                                <SelectItem value="Hybrid">Hybrid System</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[9px] uppercase font-black text-muted-foreground">Monthly Consumption (kWh)</Label>
@@ -198,37 +226,58 @@ export const LeadModal = ({ open, setOpen, initialData = null }) => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <Label className="text-[9px] uppercase font-black text-muted-foreground">Original Source</Label>
-                                <Select onValueChange={v => setValue('source_id', v)}>
-                                    <SelectTrigger className="bg-white/5 border-white/10">
-                                        <SelectValue placeholder="Traffic Source" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-stone-900 border-stone-800">
-                                        {sources?.map(s => (
-                                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Controller
+                                    name="source_id"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Select value={field.value} onValueChange={field.onChange}>
+                                            <SelectTrigger className="bg-white/5 border-white/10">
+                                                <SelectValue placeholder="Traffic Source" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-stone-900 border-stone-800">
+                                                {sources?.map(s => (
+                                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[9px] uppercase font-black text-muted-foreground">Linked Campaign</Label>
-                                <Select onValueChange={v => setValue('campaign_id', v)}>
-                                    <SelectTrigger className="bg-white/5 border-white/10">
-                                        <SelectValue placeholder="Specific Campaign" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-stone-900 border-stone-800">
-                                        {campaigns?.map(c => (
-                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Controller
+                                    name="campaign_id"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Select value={field.value} onValueChange={field.onChange}>
+                                            <SelectTrigger className="bg-white/5 border-white/10">
+                                                <SelectValue placeholder="Specific Campaign" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-stone-900 border-stone-800">
+                                                {campaigns?.map(c => (
+                                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
                             </div>
                         </div>
                     </div>
                     
                     <div className="pt-4">
-                        <Button type="submit" disabled={isAdding || isUpdating} className="w-full bg-primary text-black font-black uppercase italic tracking-widest py-8 shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:shadow-[0_0_30px_rgba(0,243,255,0.6)] text-xs">
-                            {isAdding || isUpdating ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : (initialData ? 'COMMIT UPDATE' : 'DEPLOY LEAD ENTRY')}
-                        </Button>
+                        <button 
+                            type="submit" 
+                            disabled={isAdding || isUpdating}
+                            onClick={(e) => {
+                                console.log('Button clicked!')
+                                console.log('Is disabled:', isAdding || isUpdating)
+                                console.log('Form element:', e.currentTarget.form)
+                            }}
+                            className="w-full bg-primary text-black font-black uppercase italic tracking-widest py-8 shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:shadow-[0_0_30px_rgba(0,243,255,0.6)] text-xs rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isAdding || isUpdating ? <Loader2 className="animate-spin mr-2 h-4 w-4 inline" /> : (initialData ? 'COMMIT UPDATE' : 'DEPLOY LEAD ENTRY')}
+                        </button>
                     </div>
                 </form>
             </DialogContent>
